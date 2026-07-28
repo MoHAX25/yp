@@ -7,9 +7,14 @@
     public interface IEventService
     {
         /// <summary>
-        /// Возвращает все события в виде IEnumerable<Event>.
+        /// Возвращает события с опциональной фильтрацией и пагинацией.
         /// </summary>
-        IEnumerable<Event> GetAll();
+        PaginatedResult<Event> GetAll(
+            string? title = null,
+            DateTime? from = null,
+            DateTime? to = null,
+            int page = 1,
+            int pageSize = 10);
 
         /// <summary>
         /// Возвращает событие по id. Возвращает null, если событие не найдено.

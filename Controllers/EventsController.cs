@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
-using yp.Models;
 using System.Linq;
+using yp.Exceptions;
+using yp.Models;
 
 namespace yp.Controllers
 {
@@ -18,12 +19,33 @@ namespace yp.Controllers
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<EventDTO>> GetAll()
+        public ActionResult<PaginatedResult<EventDTO>> GetAll(
+            [FromQuery] string? title,
+            [FromQuery] DateTime? from,
+            [FromQuery] DateTime? to,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
         {
-            var items = _service.GetAll();
-            var dtos = items.Select(ToDto);
+            if (from.HasValue && to.HasValue && from.Value > to.Value)
+                throw new ValidationAppException("Параметр from не может быть позже to.");
 
-            return Ok(dtos);
+            if (page < 1)
+                throw new ValidationAppException("Параметр page должен быть больше или равен 1.");
+
+            if (pageSize < 1)
+                throw new ValidationAppException("Параметр pageSize должен быть больше или равен 1.");
+
+            var result = _service.GetAll(title, from, to, page, pageSize);
+
+            var dto = new PaginatedResult<EventDTO>
+            {
+                Items = result.Items.Select(ToDto),
+                TotalCount = result.TotalCount,
+                Page = result.Page,
+                PageSize = result.PageSize
+            };
+
+            return Ok(dto);
         }
 
         [HttpGet("{id}")]
@@ -31,7 +53,8 @@ namespace yp.Controllers
         {
             var ev = _service.Get(id);
 
-            if (ev == null) return NotFound();
+            if (ev == null)
+                throw new NotFoundException($"Событие с id {id} не найдено.");
 
             return Ok(ToDto(ev));
         }
@@ -39,9 +62,9 @@ namespace yp.Controllers
         [HttpPost]
         public ActionResult<EventDTO> Create([FromBody] EventDTO ev)
         {
-            if (ev == null) return BadRequest();
+            if (ev == null) throw new ValidationAppException("Тело запроса не может быть пустым.");
 
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid) throw new ValidationAppException("Некорректные данные запроса.");
 
             var model = ToModel(ev);
             _service.Create(model);
@@ -53,14 +76,14 @@ namespace yp.Controllers
         [HttpPut("{id}")]
         public IActionResult Update(Guid id, [FromBody] EventDTO ev)
         {
-            if (ev == null) return BadRequest();
+            if (ev == null) throw new ValidationAppException("Тело запроса не может быть пустым.");
 
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid) throw new ValidationAppException("Некорректные данные запроса.");
 
             var model = ToModel(ev);
             var updated = _service.Update(id, model);
 
-            if (!updated) return NotFound();
+            if (!updated) throw new NotFoundException($"Событие с id {id} не найдено.");
 
             return NoContent();
         }
@@ -70,7 +93,7 @@ namespace yp.Controllers
         {
             var deleted = _service.Delete(id);
 
-            if (!deleted) return NotFound();
+            if (!deleted) throw new NotFoundException($"Событие с id {id} не найдено.");
 
             return NoContent();
         }

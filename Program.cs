@@ -1,4 +1,5 @@
 using yp;
+using yp.Middleware;
 using yp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +12,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+// Добавляем middleware для обработки исключений
+app.UseExceptionHandling();
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>

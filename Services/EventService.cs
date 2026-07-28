@@ -6,9 +6,46 @@ namespace yp.Services
     {
         private readonly List<Event> _events = new List<Event>();
 
-        public IEnumerable<Event> GetAll()
+        public PaginatedResult<Event> GetAll(
+            string? title = null,
+            DateTime? from = null,
+            DateTime? to = null,
+            int page = 1,
+            int pageSize = 10)
         {
-            return _events;
+            var query = _events.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(title))
+            {
+                query = query.Where(e =>
+                    e.Title != null &&
+                    e.Title.Contains(title, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (from.HasValue)
+            {
+                query = query.Where(e => e.StartAt >= from.Value);
+            }
+
+            if (to.HasValue)
+            {
+                query = query.Where(e => e.EndAt <= to.Value);
+            }
+
+            var totalCount = query.Count();
+
+            var items = query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return new PaginatedResult<Event>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            };
         }
 
         public Event? Get(Guid id)
