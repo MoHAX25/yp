@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using yp.Models;
 
-namespace EventService.Tests
+namespace EventServiceTests
 {
     public class EventDtoValidationTests
     {

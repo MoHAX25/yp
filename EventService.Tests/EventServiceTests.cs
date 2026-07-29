@@ -1,6 +1,7 @@
 ﻿using yp.Models;
+using yp.Services;
 
-namespace yp.EventService.Tests
+namespace EventServiceTests
 {
     public class EventServiceTests
     {
@@ -27,7 +28,7 @@ namespace yp.EventService.Tests
         [Fact]
         public void Create_ShouldAssignNewId_WhenIdIsEmpty()
         {
-            var service = new yp.Services.EventService();
+            var service = new EventService();
             var ev = MakeEvent();
             ev.Id = Guid.Empty;
 
@@ -40,7 +41,7 @@ namespace yp.EventService.Tests
         [Fact]
         public void Create_ShouldKeepProvidedId_WhenIdIsNotEmpty()
         {
-            var service = new yp.Services.EventService();
+            var service = new EventService();
             var id = Guid.NewGuid();
             var ev = MakeEvent();
             ev.Id = id;
@@ -55,7 +56,7 @@ namespace yp.EventService.Tests
         [Fact]
         public void GetAll_ShouldReturnAllEvents_WhenNoFiltersApplied()
         {
-            var service = new yp.Services.EventService();
+            var service = new EventService();
             service.Create(MakeEvent(title: "Первое"));
             service.Create(MakeEvent(title: "Второе"));
             service.Create(MakeEvent(title: "Третье"));
@@ -69,7 +70,7 @@ namespace yp.EventService.Tests
         [Fact]
         public void Get_ShouldReturnEvent_WhenIdExists()
         {
-            var service = new yp.Services.EventService();
+            var service = new EventService();
             var ev = MakeEvent(title: "Найти меня");
             service.Create(ev);
 
@@ -82,23 +83,28 @@ namespace yp.EventService.Tests
         [Fact]
         public void Update_ShouldModifyEvent_WhenIdExists()
         {
-            var service = new yp.Services.EventService();
+            var service = new EventService();
             var ev = MakeEvent(title: "Старое название");
             service.Create(ev);
+
+            var updatedIdBefore = ev.Id;
 
             var updated = MakeEvent(title: "Новое название");
             var result = service.Update(ev.Id, updated);
 
             Assert.True(result);
+
             var fromService = service.Get(ev.Id);
+
             Assert.Equal("Новое название", fromService!.Title);
-            Assert.Equal(ev.Id, fromService.Id); 
+            Assert.Equal(updatedIdBefore, updated.Id);
+            Assert.Equal(updatedIdBefore, fromService.Id);
         }
 
         [Fact]
         public void Delete_ShouldRemoveEvent_WhenIdExists()
         {
-            var service = new yp.Services.EventService();
+            var service = new EventService();
             var ev = MakeEvent();
             service.Create(ev);
 
@@ -111,7 +117,7 @@ namespace yp.EventService.Tests
         [Fact]
         public void GetAll_ShouldFilterByTitle_CaseInsensitivePartialMatch()
         {
-            var service = new yp.Services.EventService();
+            var service = new EventService();
             service.Create(MakeEvent(title: "Годовая Конференция"));
             service.Create(MakeEvent(title: "Планёрка"));
             service.Create(MakeEvent(title: "конференция по продажам"));
@@ -126,7 +132,7 @@ namespace yp.EventService.Tests
         [Fact]
         public void GetAll_ShouldFilterByDateRange()
         {
-            var service = new yp.Services.EventService();
+            var service = new EventService();
             service.Create(MakeEvent(
                 title: "До диапазона",
                 startAt: new DateTime(2026, 1, 1),
@@ -151,7 +157,7 @@ namespace yp.EventService.Tests
         [Fact]
         public void GetAll_ShouldPaginateResults()
         {
-            var service = new yp.Services.EventService();
+            var service = new EventService();
             for (var i = 1; i <= 25; i++)
             {
                 service.Create(MakeEvent(title: $"Событие {i}"));
@@ -168,7 +174,7 @@ namespace yp.EventService.Tests
         [Fact]
         public void GetAll_ShouldReturnEmptyItems_WhenPageIsBeyondTotalCount()
         {
-            var service = new yp.Services.EventService();
+            var service = new EventService();
             service.Create(MakeEvent());
 
             var result = service.GetAll(page: 5, pageSize: 10);
@@ -180,7 +186,7 @@ namespace yp.EventService.Tests
         [Fact]
         public void GetAll_ShouldCombineTitleDateAndPaginationFilters()
         {
-            var service = new yp.Services.EventService();
+            var service = new EventService();
             service.Create(MakeEvent(
                 title: "Митап по C#",
                 startAt: new DateTime(2026, 5, 1),
@@ -216,7 +222,7 @@ namespace yp.EventService.Tests
         [Fact]
         public void Get_ShouldReturnNull_WhenIdDoesNotExist()
         {
-            var service = new yp.Services.EventService();
+            var service = new EventService();
 
             var result = service.Get(Guid.NewGuid());
 
@@ -226,7 +232,7 @@ namespace yp.EventService.Tests
         [Fact]
         public void Update_ShouldReturnFalse_WhenIdDoesNotExist()
         {
-            var service = new yp.Services.EventService();
+            var service = new EventService();
             var ev = MakeEvent();
 
             var result = service.Update(Guid.NewGuid(), ev);
@@ -237,7 +243,7 @@ namespace yp.EventService.Tests
         [Fact]
         public void Delete_ShouldReturnFalse_WhenIdDoesNotExist()
         {
-            var service = new yp.Services.EventService();
+            var service = new EventService();
 
             var result = service.Delete(Guid.NewGuid());
 

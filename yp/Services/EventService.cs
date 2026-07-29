@@ -53,11 +53,15 @@ namespace yp.Services
             return _events.FirstOrDefault(e => e.Id == id);
         }
 
-        public void Create(Event ev)
+        public Event Create(Event ev)
         {
-            if (ev.Id == Guid.Empty) ev.Id = Guid.NewGuid();
+            var newEvent = ev.Id == Guid.Empty
+                ? ev with { Id = Guid.NewGuid() }
+                : ev;
 
-            _events.Add(ev);
+            _events.Add(newEvent);
+
+            return newEvent;
         }
 
         public bool Update(Guid id, Event ev)
@@ -66,8 +70,7 @@ namespace yp.Services
 
             if (idx == -1) return false;
 
-            ev.Id = id;
-            _events[idx] = ev;
+            _events[idx] = ev with { Id = id };
 
             return true;
         }

@@ -30,39 +30,70 @@ namespace yp.Middleware
 
         private async Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
-            var (statusCode, title) = MapException(exception);
-
-            // 500 логируем как Error (полный стектрейс), остальное — как Warning
-            if (statusCode == (int)HttpStatusCode.InternalServerError)
+            if (context.Response.HasStarted)
             {
-                _logger.LogError(exception, "Необработанное исключение при обработке запроса {Path}", context.Request.Path);
-            }
-            else
-            {
-                _logger.LogWarning(exception, "Ошибка обработки запроса {Path}: {Message}", context.Request.Path, exception.Message);
+                _logger.LogError(exception,
+                    "Исключение поймано после начала записи ответа, ProblemDetails отправить нельзя. Path: {Path}",
+                    context.Request.Path);
+                return;
             }
 
-            var problemDetails = new ProblemDetails
+            try
             {
-                Status = statusCode,
-                Detail = exception.Message,
+                var (statusCode, title) = MapException(exception);
 
-            };
+                if (statusCode == (int)HttpStatusCode.InternalServerError)
+                {
+                    _logger.LogError(exception, "Необработанное исключение при обработке запроса {Path}", context.Request.Path);
+                }
+                else
+                {
+                    _logger.LogWarning(exception, "Ошибка обработки запроса {Path}: {Message}", context.Request.Path, exception.Message);
+                }
 
-            if (exception is ValidationAppException validationEx && validationEx.Errors != null)
-            {
-                problemDetails.Extensions["errors"] = validationEx.Errors;
+                var problemDetails = new ProblemDetails
+                {
+                    Status = statusCode,
+                    Title = title,
+                    Type = $"https://httpstatuses.io/{statusCode}",
+                    Instance = context.Request.Path,
+                    Detail = exception.Message,
+                };
+
+                if (exception is ValidationAppException validationEx && validationEx.Errors != null)
+                {
+                    problemDetails.Extensions["errors"] = validationEx.Errors;
+                }
+
+                context.Response.ContentType = "application/problem+json";
+                context.Response.StatusCode = statusCode;
+
+                var json = JsonSerializer.Serialize(problemDetails, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
+                await context.Response.WriteAsync(json);
             }
-
-            context.Response.ContentType = "application/problem+json";
-            context.Response.StatusCode = statusCode;
-
-            var json = JsonSerializer.Serialize(problemDetails, new JsonSerializerOptions
+            catch (Exception handlerEx)
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
+                _logger.LogError(handlerEx,
+                    "Сам обработчик исключений упал при обработке запроса {Path}. Исходное исключение: {OriginalException}",
+                    context.Request.Path, exception);
 
-            await context.Response.WriteAsync(json);
+                if (context.Response.HasStarted)
+                {
+                    return;
+                }
+
+                context.Response.Clear();
+                context.Response.ContentType = "application/problem+json";
+                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+
+                const string fallbackJson = """{"status":500,"title":"Внутренняя ошибка сервера","detail":"Произошла непредвиденная ошибка."}""";
+
+                await context.Response.WriteAsync(fallbackJson);
+            }
         }
 
         private static (int StatusCode, string Title) MapException(Exception exception) => exception switch

@@ -1,4 +1,4 @@
 <Solution>
-  <Project Path="../yp/EventService.Tests/EventService.Tests.csproj" Id="898710bb-f7b0-42ec-8158-0d7d2477139c" />
+  <Project Path="EventService.Tests/EventServiceTests.csproj" Id="898710bb-f7b0-42ec-8158-0d7d2477139c" />
   <Project Path="yp/yp.csproj" />
 </Solution>

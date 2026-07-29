@@ -35,6 +35,9 @@ namespace yp.Controllers
             if (pageSize < 1)
                 throw new ValidationAppException("Параметр pageSize должен быть больше или равен 1.");
 
+            if (pageSize > 100) 
+                throw new ValidationAppException("Параметр pageSize не может быть больше 100.");
+
             var result = _service.GetAll(title, from, to, page, pageSize);
 
             var dto = new PaginatedResult<EventDTO>
@@ -64,13 +67,25 @@ namespace yp.Controllers
         {
             if (ev == null) throw new ValidationAppException("Тело запроса не может быть пустым.");
 
-            if (!ModelState.IsValid) throw new ValidationAppException("Некорректные данные запроса.");
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value?.Errors.Count > 0)
+                    .ToDictionary(
+                        x => x.Key,
+                        x => x.Value!.Errors
+                            .Select(e => e.ErrorMessage)
+                            .ToArray()
+                    );
+                throw new ValidationAppException("Некорректные данные запроса.", errors);
+            }
 
             var model = ToModel(ev);
-            _service.Create(model);
-            var createdDto = ToDto(model);
+            var created = _service.Create(model);
 
-            return CreatedAtAction(nameof(Get), new { id = createdDto.Id }, createdDto);
+            ev.Id = created.Id;
+
+            return CreatedAtAction(nameof(Get), new { id = ev.Id }, ev);
         }
 
         [HttpPut("{id}")]
@@ -78,7 +93,19 @@ namespace yp.Controllers
         {
             if (ev == null) throw new ValidationAppException("Тело запроса не может быть пустым.");
 
-            if (!ModelState.IsValid) throw new ValidationAppException("Некорректные данные запроса.");
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value?.Errors.Count > 0)
+                    .ToDictionary(
+                        x => x.Key,
+                        x => x.Value!.Errors
+                            .Select(e => e.ErrorMessage)
+                            .ToArray()
+                    );
+                throw new ValidationAppException("Некорректные данные запроса.", errors);
+            }
+                
 
             var model = ToModel(ev);
             var updated = _service.Update(id, model);

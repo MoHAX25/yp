@@ -1,7 +1,6 @@
 ﻿namespace yp
 {
     using System;
-    using System.Collections.Generic;
     using Models;
 
     public interface IEventService
@@ -22,9 +21,10 @@
         Event? Get(Guid id);
 
         /// <summary>
-        /// создает новое событие. Если Id события пустой, то присваивает ему новый Guid.
+        /// Создает новое событие. Если Id события пустой, генерирует новый Guid.
+        /// Возвращает сохранённый экземпляр (с проставленным Id).
         /// </summary>
-        void Create(Event ev);
+        Event Create(Event ev);
 
         /// <summary>
         /// Обновляет событие по id. Возвращает true, если событие найдено и обновлено.
