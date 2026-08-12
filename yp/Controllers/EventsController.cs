@@ -35,7 +35,7 @@ namespace yp.Controllers
             if (pageSize < 1)
                 throw new ValidationAppException("Параметр pageSize должен быть больше или равен 1.");
 
-            if (pageSize > 100) 
+            if (pageSize > 100)
                 throw new ValidationAppException("Параметр pageSize не может быть больше 100.");
 
             var result = _service.GetAll(title, from, to, page, pageSize);
@@ -105,7 +105,7 @@ namespace yp.Controllers
                     );
                 throw new ValidationAppException("Некорректные данные запроса.", errors);
             }
-                
+
 
             var model = ToModel(ev);
             var updated = _service.Update(id, model);

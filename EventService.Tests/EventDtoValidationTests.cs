@@ -21,7 +21,8 @@ namespace EventServiceTests
                 Id = Guid.NewGuid(),
                 Title = "Некорректное событие",
                 StartAt = new DateTime(2026, 1, 10),
-                EndAt = new DateTime(2026, 1, 5)
+                EndAt = new DateTime(2026, 1, 5),
+                Description = "Описание события"
             };
 
             var results = Validate(dto);
@@ -39,7 +40,8 @@ namespace EventServiceTests
                 Id = Guid.NewGuid(),
                 Title = "Событие без длительности",
                 StartAt = sameTime,
-                EndAt = sameTime
+                EndAt = sameTime,
+                Description = "Описание события"
             };
 
             var results = Validate(dto);
@@ -55,7 +57,8 @@ namespace EventServiceTests
                 Id = Guid.NewGuid(),
                 Title = null!,
                 StartAt = new DateTime(2026, 1, 1),
-                EndAt = new DateTime(2026, 1, 2)
+                EndAt = new DateTime(2026, 1, 2),
+                Description = "Описание события"
             };
 
             var results = Validate(dto);
@@ -72,7 +75,8 @@ namespace EventServiceTests
                 Id = Guid.NewGuid(),
                 Title = "Корректное событие",
                 StartAt = new DateTime(2026, 1, 1, 10, 0, 0),
-                EndAt = new DateTime(2026, 1, 1, 11, 0, 0)
+                EndAt = new DateTime(2026, 1, 1, 11, 0, 0),
+                Description = "Описание события"
             };
 
             var results = Validate(dto);
