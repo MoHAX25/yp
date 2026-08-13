@@ -1,15 +1,19 @@
 ﻿namespace yp
 {
     using System;
-    using System.Collections.Generic;
     using Models;
 
     public interface IEventService
     {
         /// <summary>
-        /// Возвращает все события в виде IEnumerable<Event>.
+        /// Возвращает события с опциональной фильтрацией и пагинацией.
         /// </summary>
-        IEnumerable<Event> GetAll();
+        PaginatedResult<Event> GetAll(
+            string? title = null,
+            DateTime? from = null,
+            DateTime? to = null,
+            int page = 1,
+            int pageSize = 10);
 
         /// <summary>
         /// Возвращает событие по id. Возвращает null, если событие не найдено.
@@ -17,9 +21,10 @@
         Event? Get(Guid id);
 
         /// <summary>
-        /// создает новое событие. Если Id события пустой, то присваивает ему новый Guid.
+        /// Создает новое событие. Если Id события пустой, генерирует новый Guid.
+        /// Возвращает сохранённый экземпляр (с проставленным Id).
         /// </summary>
-        void Create(Event ev);
+        Event Create(Event ev);
 
         /// <summary>
         /// Обновляет событие по id. Возвращает true, если событие найдено и обновлено.
