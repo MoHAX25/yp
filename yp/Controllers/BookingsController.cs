@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Threading.Tasks;
+using yp.Services;
 using yp.Exceptions;
 using yp.Models;
 
@@ -11,12 +10,10 @@ namespace yp.Controllers
     public class BookingsController : ControllerBase
     {
         private readonly IBookingService _service;
-        private readonly IEventService _eventService;
 
-        public BookingsController(IBookingService service, IEventService eventService)
+        public BookingsController(IBookingService service)
         {
             _service = service;
-            _eventService = eventService;
         }
 
         [HttpGet("/bookings/{id}")]
@@ -27,22 +24,29 @@ namespace yp.Controllers
             if (booking == null)
                 throw new NotFoundException($"Бронь с id {id} не найдена.");
 
-            return Ok(booking);
+            return Ok(ToDto(booking));
         }
 
         [HttpPost("/events/{id}/book")]
         public async Task<ActionResult<Booking>> Book(Guid id)
         {
-            var ev = _eventService.Get(id);
-
-            if (ev == null)
-                throw new NotFoundException($"Событие с id {id} не найдено.");
-
             var booking = await _service.CreateBookingAsync(id);
 
             var location = $"/bookings/{booking.Id}";
 
-            return Accepted(location, booking);
+            return Accepted(location, ToDto(booking));
+        }
+
+        private static BookingDTO ToDto(Booking e)
+        {
+            return new BookingDTO
+            {
+                Id = e.Id,
+                EventId = e.EventId,
+                Status = e.Status,
+                CreatedAt = e.CreatedAt,
+                ProcessedAt = e.ProcessedAt
+            };
         }
     }
 }

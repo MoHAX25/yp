@@ -1,7 +1,7 @@
 ﻿using yp.Models;
 using yp.Services;
 
-namespace EventServiceTests
+namespace Tests.Services
 {
     public class EventServiceTests
     {
