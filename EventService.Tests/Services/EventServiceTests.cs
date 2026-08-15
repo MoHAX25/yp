@@ -32,9 +32,9 @@ namespace Tests.Services
             var ev = MakeEvent();
             ev.Id = Guid.Empty;
 
-            service.Create(ev);
+            var created = service.Create(ev);
 
-            Assert.NotEqual(Guid.Empty, ev.Id);
+            Assert.NotEqual(Guid.Empty, created.Id);
             Assert.Single(service.GetAll().Items);
         }
 
@@ -72,9 +72,9 @@ namespace Tests.Services
         {
             var service = new EventService();
             var ev = MakeEvent(title: "Найти меня");
-            service.Create(ev);
+            var created = service.Create(ev);
 
-            var found = service.Get(ev.Id);
+            var found = service.Get(created.Id);
 
             Assert.NotNull(found);
             Assert.Equal("Найти меня", found!.Title);
@@ -85,19 +85,18 @@ namespace Tests.Services
         {
             var service = new EventService();
             var ev = MakeEvent(title: "Старое название");
-            service.Create(ev);
+            var created = service.Create(ev);
 
-            var updatedIdBefore = ev.Id;
+            var updatedIdBefore = created.Id;
 
             var updated = MakeEvent(title: "Новое название");
-            var result = service.Update(ev.Id, updated);
+            var result = service.Update(created.Id, updated);
 
             Assert.True(result);
 
-            var fromService = service.Get(ev.Id);
+            var fromService = service.Get(created.Id);
 
             Assert.Equal("Новое название", fromService!.Title);
-            Assert.Equal(updatedIdBefore, updated.Id);
             Assert.Equal(updatedIdBefore, fromService.Id);
         }
 
@@ -106,12 +105,12 @@ namespace Tests.Services
         {
             var service = new EventService();
             var ev = MakeEvent();
-            service.Create(ev);
+            var created = service.Create(ev);
 
-            var result = service.Delete(ev.Id);
+            var result = service.Delete(created.Id);
 
             Assert.True(result);
-            Assert.Null(service.Get(ev.Id));
+            Assert.Null(service.Get(created.Id));
         }
 
         [Fact]
