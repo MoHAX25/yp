@@ -85,8 +85,7 @@ namespace yp.Tests.Services
             var created = await _bookingService.CreateBookingAsync(eventId);
 
             var booking = await _bookingService.GetBookingByIdAsync(created.Id);
-            booking!.Status = BookingStatus.Confirmed;
-            booking.ProcessedAt = DateTime.UtcNow;
+            booking?.Confirm(DateTime.Now);
             await _bookingService.UpdateBookingAsync(booking);
 
             var fetched = await _bookingService.GetBookingByIdAsync(created.Id);
@@ -104,8 +103,7 @@ namespace yp.Tests.Services
             var created = await _bookingService.CreateBookingAsync(eventId);
 
             var booking = await _bookingService.GetBookingByIdAsync(created.Id);
-            booking!.Status = BookingStatus.Rejected;
-            booking.ProcessedAt = DateTime.UtcNow;
+            booking?.Reject(DateTime.Now);
             await _bookingService.UpdateBookingAsync(booking);
 
             var fetched = await _bookingService.GetBookingByIdAsync(created.Id);
