@@ -18,13 +18,7 @@ namespace yp.Services
             _ = _eventService.Get(eventId)
                 ?? throw new NotFoundException($"Событие с id {eventId} не найдено.");
 
-            var booking = new Booking
-            {
-                Id = Guid.NewGuid(),
-                EventId = eventId,
-                Status = BookingStatus.Pending,
-                CreatedAt = DateTime.UtcNow
-            };
+            var booking = new Booking(eventId);
             _bookings[booking.Id] = booking;
             return Task.FromResult(booking);
         }

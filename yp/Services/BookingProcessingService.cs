@@ -39,8 +39,7 @@ namespace yp.BackgroundServices
 
                         await Task.Delay(_simulatedExternalDelay, stoppingToken);
 
-                        booking.Status = BookingStatus.Confirmed;
-                        booking.ProcessedAt = DateTime.UtcNow;
+                        booking.Confirm(DateTime.UtcNow);
 
                         await _bookingService.UpdateBookingAsync(booking);
 
@@ -48,6 +47,10 @@ namespace yp.BackgroundServices
                             "Бронь {BookingId} переведена в статус {Status}.",
                             booking.Id, booking.Status);
                     }
+                }
+                catch(OperationCanceledException ex)
+                {
+                    _logger.LogInformation(ex, "Сервис BookingProcessingService был отменен.");
                 }
                 catch (Exception ex)
                 {
@@ -58,7 +61,7 @@ namespace yp.BackgroundServices
                 {
                     await Task.Delay(_pollingInterval, stoppingToken);
                 }
-                catch (TaskCanceledException)
+                catch (OperationCanceledException )
                 {
                     _logger.LogInformation("Остановка сервиса BookingProcessingService.");
                 }
