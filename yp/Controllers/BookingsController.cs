@@ -17,6 +17,8 @@ namespace yp.Controllers
         }
 
         [HttpGet("/bookings/{id}")]
+        [ProducesResponseType(typeof(BookingDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<Booking>> Get(Guid id)
         {
             var booking = await _service.GetBookingByIdAsync(id);
@@ -38,6 +40,9 @@ namespace yp.Controllers
         /// </returns>
         [HttpPost("/events/{id}/book")]
         [Produces("application/json")]
+        [ProducesResponseType(typeof(BookingDTO), StatusCodes.Status202Accepted)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<ActionResult<BookingDTO>> Book(Guid id)
         {
             var booking = await _service.CreateBookingAsync(id);
@@ -45,6 +50,17 @@ namespace yp.Controllers
             var location = $"/bookings/{booking.Id}";
 
             return Accepted(location, ToDto(booking));
+        }
+
+        [HttpPost("/bookings/{id}/reject")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(BookingDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<ActionResult<BookingDTO>> Reject(Guid id)
+        {
+            var booking = await _service.RejectBookingAsync(id);
+            return Ok(ToDto(booking));
         }
 
         private static BookingDTO ToDto(Booking e)

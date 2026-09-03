@@ -34,6 +34,34 @@ namespace yp.Services
             }
         }
 
+        public Task<Booking> RejectBookingAsync(Guid bookingId)
+        {
+            lock (_bookingLock)
+            {
+                if (!_bookings.TryGetValue(bookingId, out var booking))
+                {
+                    throw new NotFoundException($"Бронь с id {bookingId} не найдена.");
+                }
+
+                if (booking.Status != BookingStatus.Pending)
+                {
+                    throw new InvalidOperationException(
+                        $"Бронь {booking.Id} уже обработана (текущий статус: {booking.Status}).");
+                }
+
+                var @event = _eventStore.Get(booking.EventId);
+                if (@event != null)
+                {
+                    @event.ReleaseSeats();
+                    _eventStore.Update(booking.EventId, @event);
+                }
+
+                booking.Reject(DateTime.UtcNow);
+                _bookings[booking.Id] = booking;
+                return Task.FromResult(booking);
+            }
+        }
+
         public Task<Booking?> GetBookingByIdAsync(Guid bookingId)
         {
             _bookings.TryGetValue(bookingId, out var booking);

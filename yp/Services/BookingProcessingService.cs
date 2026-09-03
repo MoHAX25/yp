@@ -37,7 +37,7 @@ namespace yp.BackgroundServices
 
                     await Task.WhenAll(tasks);
                 }
-                catch(OperationCanceledException ex)
+                catch (OperationCanceledException ex)
                 {
                     _logger.LogInformation(ex, "Сервис BookingProcessingService был отменен.");
                 }
@@ -50,7 +50,7 @@ namespace yp.BackgroundServices
                 {
                     await Task.Delay(_pollingInterval, stoppingToken);
                 }
-                catch (OperationCanceledException )
+                catch (OperationCanceledException)
                 {
                     _logger.LogInformation("Остановка сервиса BookingProcessingService.");
                 }
@@ -81,8 +81,7 @@ namespace yp.BackgroundServices
                             "Событие {EventId} для брони {BookingId} не найдено. Бронь отклонена.",
                             booking.EventId, booking.Id);
 
-                        booking.Reject(DateTime.UtcNow);
-                        await _bookingService.UpdateBookingAsync(booking);
+                        await _bookingService.RejectBookingAsync(booking.Id);
                         return;
                     }
 
@@ -108,15 +107,7 @@ namespace yp.BackgroundServices
 
                 try
                 {
-                    var @event = _eventStore.Get(booking.EventId);
-                    if (@event != null)
-                    {
-                        @event.ReleaseSeats(1);
-                        _eventStore.Update(booking.EventId, @event);
-                    }
-
-                    booking.Reject(DateTime.UtcNow);
-                    await _bookingService.UpdateBookingAsync(booking);
+                    await _bookingService.RejectBookingAsync(booking.Id);
                 }
                 catch (Exception releaseEx)
                 {
