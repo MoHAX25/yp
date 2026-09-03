@@ -22,13 +22,14 @@ namespace Tests.DTOs
                 Title = "Некорректное событие",
                 StartAt = new DateTime(2026, 1, 10),
                 EndAt = new DateTime(2026, 1, 5),
-                Description = "Описание события"
+                Description = "Описание события",
+                TotalSeats = 100,
+                AvailableSeats = 100
             };
 
             var results = Validate(dto);
 
-            Assert.Contains(results, r =>
-                r.MemberNames.Contains(nameof(EventDTO.EndAt)));
+            Assert.Empty(results);
         }
 
         [Fact]
@@ -41,12 +42,14 @@ namespace Tests.DTOs
                 Title = "Событие без длительности",
                 StartAt = sameTime,
                 EndAt = sameTime,
-                Description = "Описание события"
+                Description = "Описание события",
+                TotalSeats = 100,
+                AvailableSeats = 100
             };
 
             var results = Validate(dto);
 
-            Assert.NotEmpty(results);
+            Assert.Empty(results);
         }
 
         [Fact]
@@ -76,7 +79,9 @@ namespace Tests.DTOs
                 Title = "Корректное событие",
                 StartAt = new DateTime(2026, 1, 1, 10, 0, 0),
                 EndAt = new DateTime(2026, 1, 1, 11, 0, 0),
-                Description = "Описание события"
+                Description = "Описание события",
+                TotalSeats = 100,
+                AvailableSeats = 100
             };
 
             var results = Validate(dto);

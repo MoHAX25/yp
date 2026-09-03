@@ -7,20 +7,59 @@ namespace yp.Services
     public class BookingService : IBookingService
     {
         private readonly ConcurrentDictionary<Guid, Booking> _bookings = new();
-        private readonly IEventService _eventService;
+        private readonly InMemoryEventStore _eventStore;
+        private readonly object _bookingLock = new();
 
-        public BookingService(IEventService eventService)
+        public BookingService(InMemoryEventStore eventStore)
         {
-            _eventService = eventService;
+            _eventStore = eventStore;
         }
         public Task<Booking> CreateBookingAsync(Guid eventId)
         {
-            _ = _eventService.Get(eventId)
-                ?? throw new NotFoundException($"Событие с id {eventId} не найдено.");
+            lock (_bookingLock)
+            {
+                var @event = _eventStore.Get(eventId)
+                    ?? throw new NotFoundException($"Событие с id {eventId} не найдено.");
 
-            var booking = new Booking(eventId);
-            _bookings[booking.Id] = booking;
-            return Task.FromResult(booking);
+                if (!@event.TryReserveSeats())
+                {
+                    throw new NoAvailableSeatsException("No available seats for this event");
+                }
+
+                _eventStore.Update(eventId, @event);
+
+                var booking = new Booking(eventId);
+                _bookings[booking.Id] = booking;
+                return Task.FromResult(booking);
+            }
+        }
+
+        public Task<Booking> RejectBookingAsync(Guid bookingId)
+        {
+            lock (_bookingLock)
+            {
+                if (!_bookings.TryGetValue(bookingId, out var booking))
+                {
+                    throw new NotFoundException($"Бронь с id {bookingId} не найдена.");
+                }
+
+                if (booking.Status != BookingStatus.Pending)
+                {
+                    throw new InvalidOperationException(
+                        $"Бронь {booking.Id} уже обработана (текущий статус: {booking.Status}).");
+                }
+
+                var @event = _eventStore.Get(booking.EventId);
+                if (@event != null)
+                {
+                    @event.ReleaseSeats();
+                    _eventStore.Update(booking.EventId, @event);
+                }
+
+                booking.Reject(DateTime.UtcNow);
+                _bookings[booking.Id] = booking;
+                return Task.FromResult(booking);
+            }
         }
 
         public Task<Booking?> GetBookingByIdAsync(Guid bookingId)

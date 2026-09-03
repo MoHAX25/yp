@@ -63,7 +63,7 @@ namespace yp.Controllers
         }
 
         [HttpPost]
-        public ActionResult<EventDTO> Create([FromBody] EventDTO ev)
+        public ActionResult<EventDTO> Create([FromBody] CreateEventDTO ev)
         {
             if (ev == null) throw new ValidationAppException("Тело запроса не может быть пустым.");
 
@@ -80,12 +80,11 @@ namespace yp.Controllers
                 throw new ValidationAppException("Некорректные данные запроса.", errors);
             }
 
-            var model = ToModel(ev);
-            var created = _service.Create(model);
+            var created = _service.CreateEventAsync(ev.Title, ev.Description, ev.StartAt, ev.EndAt, ev.TotalSeats);
 
-            ev.Id = created.Id;
+            var dto = ToDto(created);
 
-            return CreatedAtAction(nameof(Get), new { id = ev.Id }, ev);
+            return CreatedAtAction(nameof(Get), new { id = dto.Id }, dto);
         }
 
         [HttpPut("{id}")]
@@ -105,7 +104,6 @@ namespace yp.Controllers
                     );
                 throw new ValidationAppException("Некорректные данные запроса.", errors);
             }
-
 
             var model = ToModel(ev);
             var updated = _service.Update(id, model);
@@ -133,13 +131,16 @@ namespace yp.Controllers
                 Title = e.Title,
                 Description = e.Description,
                 StartAt = e.StartAt,
-                EndAt = e.EndAt
+                EndAt = e.EndAt,
+                TotalSeats = e.TotalSeats,
+                AvailableSeats = e.AvailableSeats
             };
         }
 
         private static Event ToModel(EventDTO dto)
         {
-            return new Event
+            return new Event(dto.TotalSeats
+                ?? throw new ValidationAppException("TotalSeats обязательно для обновления события."))
             {
                 Id = dto.Id,
                 Title = dto.Title,
