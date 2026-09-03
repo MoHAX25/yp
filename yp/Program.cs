@@ -7,16 +7,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 
 builder.Services.AddControllers();
-builder.Services.AddSingleton<IEventService, EventService>();
+builder.Services.AddSingleton<InMemoryEventStore>();
+builder.Services.AddSingleton<IEventService>(sp => new EventService(sp.GetRequiredService<InMemoryEventStore>()));
 builder.Services.AddSingleton<IBookingService, BookingService>();
 builder.Services.AddHostedService<BookingProcessingService>();
-// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Добавляем middleware для обработки исключений
 app.UseExceptionHandling();
 
 app.UseSwagger();

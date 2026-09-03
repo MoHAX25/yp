@@ -5,16 +5,25 @@ namespace Tests.Services
 {
     public class EventServiceTests
     {
+        private readonly InMemoryEventStore _store = new();
+        private readonly EventService _service;
+
+        public EventServiceTests()
+        {
+            _service = new EventService(_store);
+        }
+
         private static Event MakeEvent(
             string title = "Событие",
-            string? description = "Описание",
+            string description = "Описание",
             DateTime? startAt = null,
-            DateTime? endAt = null)
+            DateTime? endAt = null,
+            int totalSeats = 100)
         {
             var start = startAt ?? new DateTime(2026, 1, 1, 10, 0, 0);
             var end = endAt ?? start.AddHours(1);
 
-            return new Event
+            return new Event(totalSeats)
             {
                 Title = title,
                 Description = description,
@@ -23,32 +32,28 @@ namespace Tests.Services
             };
         }
 
-        // Успешные сценарии
-
         [Fact]
         public void Create_ShouldAssignNewId_WhenIdIsEmpty()
         {
-            var service = new EventService();
             var ev = MakeEvent();
             ev.Id = Guid.Empty;
 
-            var created = service.Create(ev);
+            var created = _service.Create(ev);
 
             Assert.NotEqual(Guid.Empty, created.Id);
-            Assert.Single(service.GetAll().Items);
+            Assert.Single(_service.GetAll().Items);
         }
 
         [Fact]
         public void Create_ShouldKeepProvidedId_WhenIdIsNotEmpty()
         {
-            var service = new EventService();
             var id = Guid.NewGuid();
             var ev = MakeEvent();
             ev.Id = id;
 
-            service.Create(ev);
+            _service.Create(ev);
 
-            var stored = service.Get(id);
+            var stored = _service.Get(id);
             Assert.NotNull(stored);
             Assert.Equal(id, stored!.Id);
         }
@@ -56,7 +61,8 @@ namespace Tests.Services
         [Fact]
         public void GetAll_ShouldReturnAllEvents_WhenNoFiltersApplied()
         {
-            var service = new EventService();
+            var store = new InMemoryEventStore();
+            var service = new EventService(store);
             service.Create(MakeEvent(title: "Первое"));
             service.Create(MakeEvent(title: "Второе"));
             service.Create(MakeEvent(title: "Третье"));
@@ -70,7 +76,8 @@ namespace Tests.Services
         [Fact]
         public void Get_ShouldReturnEvent_WhenIdExists()
         {
-            var service = new EventService();
+            var store = new InMemoryEventStore();
+            var service = new EventService(store);
             var ev = MakeEvent(title: "Найти меня");
             var created = service.Create(ev);
 
@@ -83,7 +90,8 @@ namespace Tests.Services
         [Fact]
         public void Update_ShouldModifyEvent_WhenIdExists()
         {
-            var service = new EventService();
+            var store = new InMemoryEventStore();
+            var service = new EventService(store);
             var ev = MakeEvent(title: "Старое название");
             var created = service.Create(ev);
 
@@ -103,7 +111,8 @@ namespace Tests.Services
         [Fact]
         public void Delete_ShouldRemoveEvent_WhenIdExists()
         {
-            var service = new EventService();
+            var store = new InMemoryEventStore();
+            var service = new EventService(store);
             var ev = MakeEvent();
             var created = service.Create(ev);
 
@@ -116,7 +125,8 @@ namespace Tests.Services
         [Fact]
         public void GetAll_ShouldFilterByTitle_CaseInsensitivePartialMatch()
         {
-            var service = new EventService();
+            var store = new InMemoryEventStore();
+            var service = new EventService(store);
             service.Create(MakeEvent(title: "Годовая Конференция"));
             service.Create(MakeEvent(title: "Планёрка"));
             service.Create(MakeEvent(title: "конференция по продажам"));
@@ -131,7 +141,8 @@ namespace Tests.Services
         [Fact]
         public void GetAll_ShouldFilterByDateRange()
         {
-            var service = new EventService();
+            var store = new InMemoryEventStore();
+            var service = new EventService(store);
             service.Create(MakeEvent(
                 title: "До диапазона",
                 startAt: new DateTime(2026, 1, 1),
@@ -156,7 +167,8 @@ namespace Tests.Services
         [Fact]
         public void GetAll_ShouldPaginateResults()
         {
-            var service = new EventService();
+            var store = new InMemoryEventStore();
+            var service = new EventService(store);
             for (var i = 1; i <= 25; i++)
             {
                 service.Create(MakeEvent(title: $"Событие {i}"));
@@ -173,7 +185,8 @@ namespace Tests.Services
         [Fact]
         public void GetAll_ShouldReturnEmptyItems_WhenPageIsBeyondTotalCount()
         {
-            var service = new EventService();
+            var store = new InMemoryEventStore();
+            var service = new EventService(store);
             service.Create(MakeEvent());
 
             var result = service.GetAll(page: 5, pageSize: 10);
@@ -185,7 +198,8 @@ namespace Tests.Services
         [Fact]
         public void GetAll_ShouldCombineTitleDateAndPaginationFilters()
         {
-            var service = new EventService();
+            var store = new InMemoryEventStore();
+            var service = new EventService(store);
             service.Create(MakeEvent(
                 title: "Митап по C#",
                 startAt: new DateTime(2026, 5, 1),
@@ -216,12 +230,11 @@ namespace Tests.Services
             Assert.Equal(1, result.PageSize);
         }
 
-        // Неуспешные сценарии
-
         [Fact]
         public void Get_ShouldReturnNull_WhenIdDoesNotExist()
         {
-            var service = new EventService();
+            var store = new InMemoryEventStore();
+            var service = new EventService(store);
 
             var result = service.Get(Guid.NewGuid());
 
@@ -231,7 +244,8 @@ namespace Tests.Services
         [Fact]
         public void Update_ShouldReturnFalse_WhenIdDoesNotExist()
         {
-            var service = new EventService();
+            var store = new InMemoryEventStore();
+            var service = new EventService(store);
             var ev = MakeEvent();
 
             var result = service.Update(Guid.NewGuid(), ev);
@@ -242,7 +256,8 @@ namespace Tests.Services
         [Fact]
         public void Delete_ShouldReturnFalse_WhenIdDoesNotExist()
         {
-            var service = new EventService();
+            var store = new InMemoryEventStore();
+            var service = new EventService(store);
 
             var result = service.Delete(Guid.NewGuid());
 

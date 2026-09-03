@@ -4,7 +4,12 @@ namespace yp.Services
 {
     public class EventService : IEventService
     {
-        private readonly List<Event> _events = new List<Event>();
+        private readonly InMemoryEventStore _store;
+
+        public EventService(InMemoryEventStore store)
+        {
+            _store = store;
+        }
 
         public PaginatedResult<Event> GetAll(
             string? title = null,
@@ -13,7 +18,8 @@ namespace yp.Services
             int page = 1,
             int pageSize = 10)
         {
-            var query = _events.AsEnumerable();
+            var allEvents = _store.GetAll();
+            var query = allEvents.AsEnumerable();
 
             if (!string.IsNullOrWhiteSpace(title))
             {
@@ -50,7 +56,7 @@ namespace yp.Services
 
         public Event? Get(Guid id)
         {
-            return _events.FirstOrDefault(e => e.Id == id);
+            return _store.Get(id);
         }
 
         public Event Create(Event ev)
@@ -59,29 +65,27 @@ namespace yp.Services
                 ? ev with { Id = Guid.NewGuid() }
                 : ev;
 
-            _events.Add(newEvent);
+            _store.Add(newEvent);
 
+            return newEvent;
+        }
+
+        public Event CreateEventAsync(string title, string description, DateTime startAt, DateTime endAt, int? totalSeats)
+        {
+            var ev = Event.Create(title, description, startAt, endAt, totalSeats);
+            var newEvent = ev with { Id = Guid.NewGuid() };
+            _store.Add(newEvent);
             return newEvent;
         }
 
         public bool Update(Guid id, Event ev)
         {
-            var idx = _events.FindIndex(e => e.Id == id);
-
-            if (idx == -1) return false;
-
-            _events[idx] = ev with { Id = id };
-
-            return true;
+            return _store.Update(id, ev);
         }
 
         public bool Delete(Guid id)
         {
-            var ev = Get(id);
-
-            if (ev == null) return false;
-
-            return _events.Remove(ev);
+            return _store.Remove(id);
         }
     }
 }

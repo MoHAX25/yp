@@ -1,4 +1,4 @@
-﻿namespace yp
+namespace yp
 {
     using System;
     using Models;
@@ -21,10 +21,16 @@
         Event? Get(Guid id);
 
         /// <summary>
-        /// Создает новое событие. Если Id события пустой, генерирует новый Guid.
+        /// Создает новое событие. Если Id события пусто, генерирует новый Guid.
         /// Возвращает сохранённый экземпляр (с проставленным Id).
         /// </summary>
         Event Create(Event ev);
+
+        /// <summary>
+        /// Создает новое событие с валидацией TotalSeats.
+        /// </summary>
+        /// <exception cref="Exceptions.ValidationAppException">Выбрасывается, если TotalSeats меньше или равно нулю.</exception>
+        Event CreateEventAsync(string title, string description, DateTime startAt, DateTime endAt, int? totalSeats);
 
         /// <summary>
         /// Обновляет событие по id. Возвращает true, если событие найдено и обновлено.
