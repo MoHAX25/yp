@@ -7,20 +7,31 @@ namespace yp.Services
     public class BookingService : IBookingService
     {
         private readonly ConcurrentDictionary<Guid, Booking> _bookings = new();
-        private readonly IEventService _eventService;
+        private readonly InMemoryEventStore _eventStore;
+        private readonly object _bookingLock = new();
 
-        public BookingService(IEventService eventService)
+        public BookingService(InMemoryEventStore eventStore)
         {
-            _eventService = eventService;
+            _eventStore = eventStore;
         }
         public Task<Booking> CreateBookingAsync(Guid eventId)
         {
-            _ = _eventService.Get(eventId)
-                ?? throw new NotFoundException($"Событие с id {eventId} не найдено.");
+            lock (_bookingLock)
+            {
+                var @event = _eventStore.Get(eventId)
+                    ?? throw new NotFoundException($"Событие с id {eventId} не найдено.");
 
-            var booking = new Booking(eventId);
-            _bookings[booking.Id] = booking;
-            return Task.FromResult(booking);
+                if (!@event.TryReserveSeats())
+                {
+                    throw new NoAvailableSeatsException("No available seats for this event");
+                }
+
+                _eventStore.Update(eventId, @event);
+
+                var booking = new Booking(eventId);
+                _bookings[booking.Id] = booking;
+                return Task.FromResult(booking);
+            }
         }
 
         public Task<Booking?> GetBookingByIdAsync(Guid bookingId)

@@ -27,8 +27,18 @@ namespace yp.Controllers
             return Ok(ToDto(booking));
         }
 
+        /// <summary>
+        /// Создать бронь для события
+        /// </summary>
+        /// <param name="id">ID события</param>
+        /// <returns>
+        /// 202 Accepted - бронь создана успешно
+        /// 404 Not Found - событие не найдено
+        /// 409 Conflict - нет доступных мест
+        /// </returns>
         [HttpPost("/events/{id}/book")]
-        public async Task<ActionResult<Booking>> Book(Guid id)
+        [Produces("application/json")]
+        public async Task<ActionResult<BookingDTO>> Book(Guid id)
         {
             var booking = await _service.CreateBookingAsync(id);
 

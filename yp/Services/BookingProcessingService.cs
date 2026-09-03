@@ -6,15 +6,19 @@ namespace yp.BackgroundServices
     public class BookingProcessingService : BackgroundService
     {
         private readonly IBookingService _bookingService;
+        private readonly InMemoryEventStore _eventStore;
         private readonly ILogger<BookingProcessingService> _logger;
         private readonly TimeSpan _pollingInterval = TimeSpan.FromSeconds(5);
         private readonly TimeSpan _simulatedExternalDelay = TimeSpan.FromSeconds(2);
+        private readonly SemaphoreSlim _processingSemaphore = new(1, 1);
 
         public BookingProcessingService(
             IBookingService bookingService,
+            InMemoryEventStore eventStore,
             ILogger<BookingProcessingService> logger)
         {
             _bookingService = bookingService;
+            _eventStore = eventStore;
             _logger = logger;
         }
 
@@ -28,25 +32,10 @@ namespace yp.BackgroundServices
                 {
                     var pendingBookings = await _bookingService.GetPendingBookingsAsync();
 
-                    foreach (var booking in pendingBookings)
-                    {
-                        if (stoppingToken.IsCancellationRequested)
-                            break;
+                    var tasks = pendingBookings.Select(booking =>
+                        ProcessBookingAsync(booking, stoppingToken));
 
-                        _logger.LogInformation(
-                            "Обработка брони {BookingId} (событие {EventId})...",
-                            booking.Id, booking.EventId);
-
-                        await Task.Delay(_simulatedExternalDelay, stoppingToken);
-
-                        booking.Confirm(DateTime.UtcNow);
-
-                        await _bookingService.UpdateBookingAsync(booking);
-
-                        _logger.LogInformation(
-                            "Бронь {BookingId} переведена в статус {Status}.",
-                            booking.Id, booking.Status);
-                    }
+                    await Task.WhenAll(tasks);
                 }
                 catch(OperationCanceledException ex)
                 {
@@ -68,6 +57,73 @@ namespace yp.BackgroundServices
             }
 
             _logger.LogInformation("BookingProcessingService остановлен.");
+        }
+
+        private async Task ProcessBookingAsync(Booking booking, CancellationToken stoppingToken)
+        {
+            try
+            {
+                _logger.LogInformation(
+                    "Обработка брони {BookingId} (событие {EventId})...",
+                    booking.Id, booking.EventId);
+
+                await Task.Delay(_simulatedExternalDelay, stoppingToken);
+
+                await _processingSemaphore.WaitAsync(stoppingToken);
+
+                try
+                {
+                    var @event = _eventStore.Get(booking.EventId);
+
+                    if (@event == null)
+                    {
+                        _logger.LogWarning(
+                            "Событие {EventId} для брони {BookingId} не найдено. Бронь отклонена.",
+                            booking.EventId, booking.Id);
+
+                        booking.Reject(DateTime.UtcNow);
+                        await _bookingService.UpdateBookingAsync(booking);
+                        return;
+                    }
+
+                    booking.Confirm(DateTime.UtcNow);
+                    await _bookingService.UpdateBookingAsync(booking);
+
+                    _logger.LogInformation(
+                        "Бронь {BookingId} переведена в статус {Status}.",
+                        booking.Id, booking.Status);
+                }
+                finally
+                {
+                    _processingSemaphore.Release();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Обработка брони {BookingId} была отменена.", booking.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при обработке брони {BookingId}. Бронь отклонена.", booking.Id);
+
+                try
+                {
+                    var @event = _eventStore.Get(booking.EventId);
+                    if (@event != null)
+                    {
+                        @event.ReleaseSeats(1);
+                        _eventStore.Update(booking.EventId, @event);
+                    }
+
+                    booking.Reject(DateTime.UtcNow);
+                    await _bookingService.UpdateBookingAsync(booking);
+                }
+                catch (Exception releaseEx)
+                {
+                    _logger.LogError(releaseEx,
+                        "Ошибка при откате брони {BookingId} после исключения.", booking.Id);
+                }
+            }
         }
     }
 }

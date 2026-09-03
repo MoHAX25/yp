@@ -99,6 +99,7 @@ namespace yp.Middleware
         private static (int StatusCode, string Title) MapException(Exception exception) => exception switch
         {
             NotFoundException => ((int)HttpStatusCode.NotFound, "Ресурс не найден"),
+            NoAvailableSeatsException => ((int)HttpStatusCode.Conflict, "Нет доступных мест"),
             ValidationAppException => ((int)HttpStatusCode.BadRequest, "Ошибка валидации"),
             ArgumentException => ((int)HttpStatusCode.BadRequest, "Некорректный запрос"),
             _ => ((int)HttpStatusCode.InternalServerError, "Внутренняя ошибка сервера")
